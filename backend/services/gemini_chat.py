@@ -27,10 +27,19 @@ try:
 except ModuleNotFoundError:
     genai = None
 
+try:
+    from openai import OpenAI
+except ModuleNotFoundError:
+    OpenAI = None
+
 GEMINI_MODEL_NAME = "gemini-2.0-flash"
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+OPENROUTER_DEFAULT_MODEL = "deepseek/deepseek-chat-v3-0324"
 
 gemini_model = None
 gemini_model_init_error = None
+openrouter_client = None
+openrouter_client_init_error = None
 
 SOURCE_REFERENCE = {
     "operational": {
@@ -126,7 +135,7 @@ def append_source_block(response_text: str, source_keys: Sequence[str]) -> str:
 def get_llm_provider() -> str:
     """Resolve provider from env with local-safe default."""
     provider = (os.getenv("LLM_PROVIDER") or "ollama").strip().lower()
-    return provider if provider in {"ollama", "gemini"} else "ollama"
+    return provider if provider in {"ollama", "gemini", "openrouter"} else "ollama"
 
 
 def get_ollama_config() -> tuple[str, str, int]:
@@ -162,6 +171,46 @@ def get_gemini_model():
     except Exception as exc:
         gemini_model_init_error = f"Gemini client initialization failed: {exc}"
         return None, gemini_model_init_error
+
+
+def get_openrouter_client():
+    """Lazily initialize OpenRouter client."""
+    global openrouter_client, openrouter_client_init_error
+
+    if openrouter_client is not None:
+        return openrouter_client, None
+    if openrouter_client_init_error is not None:
+        return None, openrouter_client_init_error
+
+    if OpenAI is None:
+        openrouter_client_init_error = "Python package `openai` is not installed in the active runtime."
+        return None, openrouter_client_init_error
+
+    api_key = (os.getenv("OPENROUTER_API_KEY") or "").strip()
+    if not api_key:
+        openrouter_client_init_error = "`OPENROUTER_API_KEY` is not set for the running backend process."
+        return None, openrouter_client_init_error
+
+    try:
+        openrouter_client = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=api_key)
+        return openrouter_client, None
+    except Exception as exc:
+        openrouter_client_init_error = f"OpenRouter client initialization failed: {exc}"
+        return None, openrouter_client_init_error
+
+
+def get_openrouter_config() -> tuple[str, dict, int]:
+    """Return OpenRouter model and optional headers."""
+    model_name = (os.getenv("OPENROUTER_MODEL") or OPENROUTER_DEFAULT_MODEL).strip()
+    timeout_sec = int((os.getenv("OPENROUTER_TIMEOUT_SEC") or "120").strip())
+    extra_headers = {}
+    referer = (os.getenv("OPENROUTER_HTTP_REFERER") or "").strip()
+    title = (os.getenv("OPENROUTER_APP_TITLE") or "").strip()
+    if referer:
+        extra_headers["HTTP-Referer"] = referer
+    if title:
+        extra_headers["X-Title"] = title
+    return model_name, extra_headers, timeout_sec
 
 
 def history_to_ollama_messages(conversation_history: Sequence[dict] | None) -> list[dict]:
@@ -245,6 +294,45 @@ def generate_with_gemini(system_prompt: str, user_prompt: str) -> tuple[str | No
         return None, str(exc)
 
 
+def generate_with_openrouter(
+    system_prompt: str,
+    user_prompt: str,
+    conversation_history: Sequence[dict] | None = None,
+) -> tuple[str | None, str | None]:
+    """Call OpenRouter chat completions."""
+    client, init_error = get_openrouter_client()
+    if client is None:
+        return None, init_error
+
+    model_name, extra_headers, timeout_sec = get_openrouter_config()
+    messages = [
+        {"role": "system", "content": system_prompt},
+        *history_to_ollama_messages(conversation_history),
+        {"role": "user", "content": user_prompt},
+    ]
+
+    try:
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            temperature=0.2,
+            max_tokens=1000,
+            extra_headers=extra_headers or None,
+            timeout=timeout_sec,
+        )
+    except Exception as exc:
+        return None, f"OpenRouter request failed: {exc}"
+
+    try:
+        content = (response.choices[0].message.content or "").strip()
+    except Exception:
+        content = ""
+
+    if not content:
+        return None, "OpenRouter response did not include message content."
+
+    return content, None
+
 def llm_generate(
     system_prompt: str,
     user_prompt: str,
@@ -255,6 +343,9 @@ def llm_generate(
 
     if provider == "ollama":
         return generate_with_ollama(system_prompt, user_prompt, conversation_history)
+
+    if provider == "openrouter":
+        return generate_with_openrouter(system_prompt, user_prompt, conversation_history)
 
     return generate_with_gemini(system_prompt, user_prompt)
 
