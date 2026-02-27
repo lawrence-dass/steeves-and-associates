@@ -91,6 +91,68 @@ NEXT_PUBLIC_API_URL=http://localhost:5000
 NEXT_PUBLIC_POWERBI_EMBED_URL=your_report_embed_url
 ```
 
+## Deployment (Azure + Vercel)
+
+### GitHub Secrets (Backend Workflow)
+
+The GitHub Actions workflow `.github/workflows/deploy-backend.yml` expects these secrets:
+
+- `AZURE_CREDENTIALS` (service principal JSON)
+- `ACR_NAME` (ACR name, e.g., `steevesassociatesacr`)
+- `ACR_LOGIN_SERVER` (e.g., `steevesassociatesacr.azurecr.io`)
+- `RESOURCE_GROUP` (Azure resource group name)
+- `CONTAINERAPP_NAME` (Azure Container App name)
+- `DATABASE_URL` (Azure Postgres connection string)
+- `OPENROUTER_API_KEY` (OpenRouter API key)
+- `CORS_ORIGINS` (comma-separated exact origins, e.g., Vercel URL + localhost)
+- `POWERBI_CLIENT_ID`
+- `POWERBI_CLIENT_SECRET`
+- `POWERBI_TENANT_ID`
+- `POWERBI_WORKSPACE_ID`
+- `POWERBI_DATASET_ID`
+- `GEMINI_API_KEY` (optional fallback if `LLM_PROVIDER=gemini`)
+
+### Azure CLI Setup (Backend + Database)
+
+Run these once to create core Azure resources:
+
+```bash
+az login
+
+az group create --name steeves-and-associates-rg --location eastus
+
+az acr create \
+  --name steevesassociatesacr \
+  --resource-group steeves-and-associates-rg \
+  --sku Basic
+
+az containerapp env create \
+  --name steeves-and-associates-env \
+  --resource-group steeves-and-associates-rg \
+  --location eastus
+
+az postgres flexible-server create \
+  --name steeves-and-associates-db \
+  --resource-group steeves-and-associates-rg \
+  --location eastus \
+  --sku-name Standard_B1ms \
+  --tier Burstable \
+  --storage-size 32 \
+  --admin-user steevesadmin \
+  --admin-password "YourSecurePassword123!" \
+  --version 16 \
+  --public-access 0.0.0.0
+
+az postgres flexible-server db create \
+  --resource-group steeves-and-associates-rg \
+  --server-name steeves-and-associates-db \
+  --database-name steeves_analytics
+```
+
+### Vercel Setup (Frontend)
+
+Set `NEXT_PUBLIC_API_URL` to the Azure Container App URL and deploy via Vercel.
+
 ## Extensibility (v2 Features)
 
 The architecture supports adding these without rewriting:
