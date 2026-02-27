@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --vz-bg: #f3f3f9;
+    --vz-surface: #ffffff;
+    --vz-border: #e9ebec;
+    --vz-text: #495057;
+    --vz-muted: #878a99;
+    --vz-title: #212529;
+    --vz-sidebar: #405189;
+    --vz-accent: #3577f1;
+    --vz-success: #0ab39c;
+    --vz-warning: #f7b84b;
+    --vz-danger: #f06548;
+  }
+
+  * {
+    border-color: var(--vz-border);
+  }
+}
+
+body {
+  font-family: "Avenir Next", "Nunito Sans", "Segoe UI", sans-serif;
+  background-color: var(--vz-bg);
+  color: var(--vz-text);
+}
+
+@layer components {
+  .vz-card {
+    @apply bg-steeves-card border border-steeves-border rounded-panel shadow-panel;
+  }
+
+  .vz-input {
+    @apply rounded-lg border border-steeves-border bg-white px-3 py-2.5 text-sm text-steeves-ink
+      placeholder:text-steeves-muted/80 focus:outline-none focus:ring-2 focus:ring-steeves-blue/25 focus:border-steeves-blue;
+  }
+
+  .vz-chip {
+    @apply inline-flex items-center rounded-md bg-steeves-blue/10 px-2 py-1 text-[11px] font-medium text-steeves-blue;
+  }
+
+  .vz-title {
+    @apply text-[26px] font-semibold tracking-tight text-[#212529];
+  }
+
+  .vz-subtitle {
+    @apply text-sm text-steeves-muted;
+  }
+
+  .vz-topbar-icon {
+    @apply flex h-9 w-9 items-center justify-center rounded-md text-steeves-muted transition-colors hover:bg-steeves-light hover:text-steeves-navy;
+  }
+}
