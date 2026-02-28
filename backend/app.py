@@ -1,6 +1,6 @@
 """
 Steeves & Associates Capstone — Flask API
-Lean backend with 4 route groups: overview, competitors, chat, powerbi
+Route groups: overview, competitors, chat, client-health, allocation
 """
 import os
 from pathlib import Path
@@ -36,14 +36,12 @@ def create_app():
     from routes.overview import overview_bp
     from routes.competitors import competitors_bp
     from routes.chat import chat_bp
-    from routes.powerbi import powerbi_bp
     from routes.health import health_bp
     from routes.allocation import allocation_bp
-    
+
     app.register_blueprint(overview_bp, url_prefix="/api/overview")
     app.register_blueprint(competitors_bp, url_prefix="/api/competitors")
     app.register_blueprint(chat_bp, url_prefix="/api/chat")
-    app.register_blueprint(powerbi_bp, url_prefix="/api/powerbi")
     app.register_blueprint(health_bp, url_prefix="/api/client-health")
     app.register_blueprint(allocation_bp, url_prefix="/api/allocation")
     
