@@ -39,16 +39,19 @@ jobs:
           echo "SHA_TAG=$SHA_TAG" >> $GITHUB_ENV
 
       - name: Update Container App secrets
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           set -euo pipefail
           az extension add --name containerapp --upgrade
-          # DATABASE_URL stored as a secret to avoid shell-interpolating @ and # in the password
+          # Use step-level env vars so the shell handles any = or @ in the values safely
           az containerapp secret set \
             --name "${{ secrets.CONTAINERAPP_NAME }}" \
             --resource-group "${{ secrets.RESOURCE_GROUP }}" \
             --secrets \
-              "dburl=${{ secrets.DATABASE_URL }}" \
-              "openrouter-key=${{ secrets.OPENROUTER_API_KEY }}"
+              "dburl=${DATABASE_URL}" \
+              "openrouter-key=${OPENROUTER_API_KEY}"
 
       - name: Deploy to Azure Container Apps
         run: |
