@@ -126,7 +126,7 @@ Required GitHub Secrets (all 8 must be set):
 | `ACR_LOGIN_SERVER` | `steevesassociatesacr.azurecr.io` |
 | `RESOURCE_GROUP` | `steeves-and-associates-rg` |
 | `CONTAINERAPP_NAME` | `steeves-api` |
-| `DATABASE_URL` | PostgreSQL URL — URL-encode `@`→`%40`, `#`→`%23` in password |
+| `DATABASE_URL` | libpq keyword/value format — `host=... port=5432 dbname=steeves_capstone user=steevesadmin password=<pass> sslmode=require` (NOT URI format — `@` and `#` in password cause URI parsing failures) |
 | `OPENROUTER_API_KEY` | `sk-or-v1-...` |
 | `CORS_ORIGINS` | `https://steeves-and-associates.vercel.app,http://localhost:3000` |
 
@@ -148,7 +148,7 @@ az containerapp update \
 ### Container App Environment Variables
 | Variable | How set |
 |----------|---------|
-| `DATABASE_URL` | Container App secret `dburl` via `secretref:dburl` |
+| `DATABASE_URL` | Container App secret `dburl` via `secretref:dburl` — use libpq keyword/value format (not URI), e.g. `host=... password=...` |
 | `OPENROUTER_API_KEY` | Container App secret `openrouter-key` via `secretref:openrouter-key` |
 | `LLM_PROVIDER` | `openrouter` |
 | `FLASK_ENV` | `production` |
@@ -157,4 +157,4 @@ az containerapp update \
 ### Database — Azure PostgreSQL (Canada Central)
 - Firewall: local machine IP + `0.0.0.0–255.255.255.255` for Container Apps egress
 - Database name: `steeves_capstone`; admin login: `steevesadmin`
-- Password special chars must be URL-encoded (`@`→`%40`, `#`→`%23`) in the connection string
+- **Use libpq keyword/value format for DATABASE_URL**, not URI format — psycopg2's URI parser mishandles `@` and `#` in passwords even when percent-encoded. Format: `host=<server> port=5432 dbname=steeves_capstone user=steevesadmin password=<pass> sslmode=require`
