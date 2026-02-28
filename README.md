@@ -127,9 +127,33 @@ NEXT_PUBLIC_API_URL=http://localhost:5000
 
 ## Deployment
 
-### Backend — Azure Container Apps
+### CI/CD — GitHub Actions (Backend)
+
+Pushing to `main` with changes under `backend/**` automatically:
+1. Builds a `linux/amd64` Docker image on the GitHub runner
+2. Pushes `:latest` + `:<sha>` tags to Azure Container Registry
+3. Updates Container App secrets and deploys the new image
+
+To trigger manually: **Actions → Deploy Backend (Azure Container Apps) → Run workflow**
+
+See [`docs/diagrams/06-cicd-pipeline.md`](./docs/diagrams/06-cicd-pipeline.md) for the full pipeline diagram.
+
+#### Required GitHub Secrets
+
+| Secret | Value |
+|--------|-------|
+| `AZURE_CREDENTIALS` | `az ad sp create-for-rbac` JSON output |
+| `ACR_NAME` | `steevesassociatesacr` |
+| `ACR_LOGIN_SERVER` | `steevesassociatesacr.azurecr.io` |
+| `RESOURCE_GROUP` | `steeves-and-associates-rg` |
+| `CONTAINERAPP_NAME` | `steeves-api` |
+| `DATABASE_URL` | PostgreSQL URL (URL-encode `@`→`%40`, `#`→`%23` in password) |
+| `OPENROUTER_API_KEY` | `sk-or-v1-...` |
+| `CORS_ORIGINS` | `https://steeves-and-associates.vercel.app,http://localhost:3000` |
+
+#### Manual deploy (one-off, Apple Silicon)
 ```bash
-# Must build for linux/amd64 (required for Azure; Apple Silicon uses --platform flag)
+# Required on Apple Silicon — Azure needs linux/amd64
 az acr login --name steevesassociatesacr
 docker buildx build --platform linux/amd64 \
   -t steevesassociatesacr.azurecr.io/steeves-api:latest --push backend/
@@ -141,10 +165,13 @@ az containerapp update \
 ```
 
 ### Frontend — Vercel
+Auto-deploys on every push to `main`.
+
+Initial setup:
 1. Import repo on [vercel.com](https://vercel.com)
 2. Set **Root Directory** → `frontend`
-3. Add env var: `NEXT_PUBLIC_API_URL` = Container App URL
-4. Deploy — every push to `main` redeploys automatically
+3. Add env var: `NEXT_PUBLIC_API_URL` = `https://steeves-api.happyforest-1e18c340.eastus.azurecontainerapps.io`
+4. Deploy
 
 ### Azure Resources
 | Resource | Name | Region |

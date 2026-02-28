@@ -40,6 +40,10 @@ flowchart LR
     CAE[(Container Apps Env<br/>steeves-and-associates-env)]:::infra
   end
 
+  subgraph CICD["CI/CD — GitHub Actions"]
+    GHA[push to main<br/>backend/** → build + deploy]:::cicd
+  end
+
   U --> OV & MK & CL & AL & CH
   OV & MK & CL & AL & CH --> UI
 
@@ -59,7 +63,7 @@ flowchart LR
   CSV --> SEED
   SEED --> PG
 
-  ACR --> CAE --> BE
+  GHA --> ACR --> CAE --> BE
 
   classDef actor fill:#F3E8FF,stroke:#7E22CE,color:#3B0764,stroke-width:2px;
   classDef frontend fill:#DBEAFE,stroke:#2563EB,color:#1E3A8A,stroke-width:1.5px;
@@ -68,4 +72,5 @@ flowchart LR
   classDef source fill:#FFF7ED,stroke:#EA580C,color:#9A3412,stroke-width:1.5px;
   classDef llm fill:#FCE7F3,stroke:#DB2777,color:#831843,stroke-width:1.5px;
   classDef infra fill:#E0F2FE,stroke:#0284C7,color:#0C4A6E,stroke-width:1.5px;
+  classDef cicd fill:#DCFCE7,stroke:#16A34A,color:#14532D,stroke-width:1.5px;
 ```

@@ -3,11 +3,12 @@
 These diagrams are color-coded and presentation-ready for teammates and faculty review.
 Reflect the live deployed stack as of February 2026.
 
-1. [01-system-architecture.md](./01-system-architecture.md) — Full stack map: Vercel · Azure Container Apps · Azure PostgreSQL · OpenRouter
+1. [01-system-architecture.md](./01-system-architecture.md) — Full stack map: Vercel · Azure Container Apps · Azure PostgreSQL · OpenRouter · GitHub Actions
 2. [02-user-flow.md](./02-user-flow.md) — End-user paths across all 5 modules
 3. [03-data-pipeline.md](./03-data-pipeline.md) — Data ingestion to analytics outputs
 4. [04-api-surface.md](./04-api-surface.md) — API endpoint groups and dependencies
 5. [05-chat-lifecycle.md](./05-chat-lifecycle.md) — Chat intent routing with NL-to-SQL, RFMT health, and allocation paths
+6. [06-cicd-pipeline.md](./06-cicd-pipeline.md) — GitHub Actions deploy pipeline: build → ACR push → Container Apps update
 
 ## Deployed Infrastructure
 

@@ -113,11 +113,28 @@ For local dev, set `LLM_PROVIDER=ollama` with `ollama pull llama3.1:8b` to avoid
 
 ### Frontend — Vercel
 - Auto-deploys from `main` (root directory set to `frontend`)
-- Set `NEXT_PUBLIC_API_URL` = `https://steeves-api.happyforest-1e18c340.eastus.azurecontainerapps.io`
+- `NEXT_PUBLIC_API_URL` = `https://steeves-api.happyforest-1e18c340.eastus.azurecontainerapps.io`
 
-### Backend — Azure Container Apps
-Build and push must target `linux/amd64` (Apple Silicon requires `--platform linux/amd64`):
+### Backend — GitHub Actions CI/CD (primary)
+Pushing to `main` with changes to `backend/**` triggers `.github/workflows/deploy-backend.yml` automatically. Manual trigger also available via `workflow_dispatch` in the Actions UI.
+
+Required GitHub Secrets (all 8 must be set):
+| Secret | Value |
+|--------|-------|
+| `AZURE_CREDENTIALS` | Service principal JSON from `az ad sp create-for-rbac` |
+| `ACR_NAME` | `steevesassociatesacr` |
+| `ACR_LOGIN_SERVER` | `steevesassociatesacr.azurecr.io` |
+| `RESOURCE_GROUP` | `steeves-and-associates-rg` |
+| `CONTAINERAPP_NAME` | `steeves-api` |
+| `DATABASE_URL` | PostgreSQL URL — URL-encode `@`→`%40`, `#`→`%23` in password |
+| `OPENROUTER_API_KEY` | `sk-or-v1-...` |
+| `CORS_ORIGINS` | `https://steeves-and-associates.vercel.app,http://localhost:3000` |
+
+The pipeline: Checkout → Azure Login → ACR Login → `docker build` (amd64) → push → `az containerapp secret set` → `az containerapp update`
+
+### Backend — Manual deploy (one-off, Apple Silicon)
 ```bash
+# GitHub Actions runner is amd64 natively; local Apple Silicon needs --platform flag
 az acr login --name steevesassociatesacr
 docker buildx build --platform linux/amd64 \
   -t steevesassociatesacr.azurecr.io/steeves-api:latest --push backend/
@@ -128,15 +145,16 @@ az containerapp update \
   --image steevesassociatesacr.azurecr.io/steeves-api:latest
 ```
 
-### Required Environment Variables (Container App)
+### Container App Environment Variables
 | Variable | How set |
 |----------|---------|
-| `DATABASE_URL` | Secret `dburl` — URL-encode `@`→`%40` `#`→`%23` in password |
-| `OPENROUTER_API_KEY` | Plain env var or secret |
+| `DATABASE_URL` | Container App secret `dburl` via `secretref:dburl` |
+| `OPENROUTER_API_KEY` | Container App secret `openrouter-key` via `secretref:openrouter-key` |
 | `LLM_PROVIDER` | `openrouter` |
 | `FLASK_ENV` | `production` |
+| `CORS_ORIGINS` | Direct env var from `CORS_ORIGINS` secret |
 
 ### Database — Azure PostgreSQL (Canada Central)
 - Firewall: local machine IP + `0.0.0.0–255.255.255.255` for Container Apps egress
-- Connection string uses `steeves_capstone` database (not `steeves_analytics`)
-- Password special chars must be URL-encoded when passed via shell or CONNECTION_STRING
+- Database name: `steeves_capstone`; admin login: `steevesadmin`
+- Password special chars must be URL-encoded (`@`→`%40`, `#`→`%23`) in the connection string
