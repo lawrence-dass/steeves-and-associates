@@ -50,10 +50,6 @@ SOURCE_REFERENCE = {
         "label": "Competitive Data",
         "file": "backend/data/microsoft-azure-partners-canada__new_1.csv",
     },
-    "powerbi": {
-        "label": "Power BI Data",
-        "file": "Power BI workspace semantic model",
-    },
 }
 
 SYSTEM_PROMPT = """You are an AI analytics assistant for Steeves and Associates,
@@ -62,7 +58,6 @@ a Microsoft consulting firm in Canada.
 You help answer questions about:
 1) operational metrics from the PostgreSQL analytics database
 2) competitive positioning vs Canadian Microsoft partners
-3) Power BI reporting context
 
 Rules:
 - Be concise and direct.
@@ -382,15 +377,11 @@ def detect_context_intents(message: str) -> list[str]:
         "monthly",
         "quarterly",
     ]
-    powerbi_keywords = ["power bi", "powerbi", "dashboard", "report", "embed"]
-
     intents = []
     if any(kw in msg for kw in competitor_keywords):
         intents.append("competitive")
     if any(kw in msg for kw in operational_keywords):
         intents.append("operational")
-    if any(kw in msg for kw in powerbi_keywords):
-        intents.append("powerbi")
 
     return intents if intents else ["operational"]
 
@@ -530,14 +521,6 @@ def build_competitive_context() -> str:
     return context
 
 
-def build_powerbi_context() -> str:
-    """Provide static Power BI context."""
-    return """POWER BI INFORMATION:
-Steeves and Associates uses Power BI dashboards for operational reporting.
-Dashboards cover revenue, billable hours, utilization, and project performance.
-The Power BI workspace is connected to the same operational data source."""
-
-
 def build_user_prompt(full_context: str, message: str) -> str:
     """Construct contextual user prompt."""
     return f"""DATA CONTEXT:
@@ -598,8 +581,6 @@ def answer_contextual_query(message: str, conversation_history: Sequence[dict] |
         context_parts.append(build_operational_context())
     if "competitive" in context_intents:
         context_parts.append(build_competitive_context())
-    if "powerbi" in context_intents:
-        context_parts.append(build_powerbi_context())
 
     full_context = "\n\n---\n\n".join(context_parts)
     user_prompt = build_user_prompt(full_context, message)
