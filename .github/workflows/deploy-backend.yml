@@ -6,13 +6,15 @@ on:
     paths:
       - "backend/**"
       - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch:
 
 env:
-  IMAGE_NAME: steeves-and-associates-api
+  IMAGE_NAME: steeves-api
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,27 +30,36 @@ jobs:
       - name: Build and Push Image
         run: |
           set -euo pipefail
-          IMAGE_TAG="${{ secrets.ACR_LOGIN_SERVER }}/${IMAGE_NAME}:${{ github.sha }}"
-          docker build -t "$IMAGE_TAG" ./backend
-          docker push "$IMAGE_TAG"
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+          SHA_TAG="${{ secrets.ACR_LOGIN_SERVER }}/${IMAGE_NAME}:${{ github.sha }}"
+          LATEST_TAG="${{ secrets.ACR_LOGIN_SERVER }}/${IMAGE_NAME}:latest"
+          # ubuntu-latest runners are amd64 — image is natively compatible with Azure Container Apps
+          docker build -t "$SHA_TAG" -t "$LATEST_TAG" ./backend
+          docker push "$SHA_TAG"
+          docker push "$LATEST_TAG"
+          echo "SHA_TAG=$SHA_TAG" >> $GITHUB_ENV
+
+      - name: Update Container App secrets
+        run: |
+          set -euo pipefail
+          az extension add --name containerapp --upgrade
+          # DATABASE_URL stored as a secret to avoid shell-interpolating @ and # in the password
+          az containerapp secret set \
+            --name "${{ secrets.CONTAINERAPP_NAME }}" \
+            --resource-group "${{ secrets.RESOURCE_GROUP }}" \
+            --secrets \
+              "dburl=${{ secrets.DATABASE_URL }}" \
+              "openrouter-key=${{ secrets.OPENROUTER_API_KEY }}"
 
       - name: Deploy to Azure Container Apps
         run: |
           set -euo pipefail
-          az extension add --name containerapp --upgrade
           az containerapp update \
             --name "${{ secrets.CONTAINERAPP_NAME }}" \
             --resource-group "${{ secrets.RESOURCE_GROUP }}" \
-            --image "$IMAGE_TAG" \
+            --image "$SHA_TAG" \
             --set-env-vars \
-              DATABASE_URL="${{ secrets.DATABASE_URL }}" \
-              OPENROUTER_API_KEY="${{ secrets.OPENROUTER_API_KEY }}" \
-              LLM_PROVIDER="openrouter" \
-              CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}" \
-              POWERBI_CLIENT_ID="${{ secrets.POWERBI_CLIENT_ID }}" \
-              POWERBI_CLIENT_SECRET="${{ secrets.POWERBI_CLIENT_SECRET }}" \
-              POWERBI_TENANT_ID="${{ secrets.POWERBI_TENANT_ID }}" \
-              POWERBI_WORKSPACE_ID="${{ secrets.POWERBI_WORKSPACE_ID }}" \
-              POWERBI_DATASET_ID="${{ secrets.POWERBI_DATASET_ID }}" \
-              GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}"
+              "DATABASE_URL=secretref:dburl" \
+              "OPENROUTER_API_KEY=secretref:openrouter-key" \
+              "LLM_PROVIDER=openrouter" \
+              "FLASK_ENV=production" \
+              "CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}"
