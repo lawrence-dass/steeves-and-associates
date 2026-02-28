@@ -2,29 +2,37 @@
 
 ```mermaid
 flowchart TB
-  UI[Next.js Frontend<br/>calls /api/*]:::frontend --> PROXY[Next rewrite proxy<br/>/api -> Flask]:::proxy
+  UI[Next.js Frontend — Vercel<br/>calls NEXT_PUBLIC_API_URL directly in prod]:::frontend
 
-  PROXY --> OVG
-  PROXY --> MKG
-  PROXY --> CHG
-  PROXY --> PBG
+  UI --> OVG & MKG & CLG & ALG & CHG
 
   subgraph OVG["Overview Endpoints"]
     O1[GET /api/overview/filter-options]:::overview
-    O2[GET /api/overview/kpis<br/>?start_month&end_month]:::overview
-    O3[GET /api/overview/revenue-trend<br/>?start_month&end_month]:::overview
-    O4[GET /api/overview/top-customers<br/>?limit&start_month&end_month]:::overview
-    O5[GET /api/overview/top-resources<br/>?limit&start_month&end_month]:::overview
-    O6[GET /api/overview/revenue-by-customer<br/>?limit&start_month&end_month]:::overview
+    O2[GET /api/overview/kpis]:::overview
+    O3[GET /api/overview/revenue-trend]:::overview
+    O4[GET /api/overview/top-customers]:::overview
+    O5[GET /api/overview/top-resources]:::overview
+    O6[GET /api/overview/revenue-by-customer]:::overview
   end
 
   subgraph MKG["Competitors Endpoints"]
     M1[GET /api/competitors/filter-options]:::market
-    M2[GET /api/competitors/all<br/>?location&min_certs&min_cloud&min_rate&max_rate&include_steeves]:::market
-    M3[GET /api/competitors/summary<br/>same filters]:::market
-    M4[GET /api/competitors/by-location<br/>same filters]:::market
-    M5[GET /api/competitors/by-size<br/>same filters]:::market
-    M6[GET /api/competitors/steeves-position<br/>same filters]:::market
+    M2[GET /api/competitors/all]:::market
+    M3[GET /api/competitors/summary]:::market
+    M4[GET /api/competitors/by-location]:::market
+    M5[GET /api/competitors/by-size]:::market
+    M6[GET /api/competitors/steeves-position]:::market
+  end
+
+  subgraph CLG["Client Health Endpoints"]
+    CL1[GET /api/client-health/scores]:::health
+    CL2[GET /api/client-health/summary]:::health
+    CL3[GET /api/client-health/at-risk]:::health
+  end
+
+  subgraph ALG["Allocation Endpoints"]
+    A1[GET /api/allocation/inputs]:::alloc
+    A2[POST /api/allocation/recommend]:::alloc
   end
 
   subgraph CHG["Chat Endpoints"]
@@ -33,24 +41,16 @@ flowchart TB
     C3[GET /api/chat/suggestions]:::chat
   end
 
-  subgraph PBG["Power BI Endpoints"]
-    P1[GET /api/powerbi/*]:::pbi
-  end
-
-  OVG --> DB[(PostgreSQL)]:::db
-  MKG --> DB
+  OVG & MKG & CLG & ALG --> DB[(Azure PostgreSQL<br/>steeves_capstone)]:::db
   CHG --> DB
-  CHG --> LLM[(Ollama / Gemini)]:::llm
-  PBG --> EXT[(Power BI)]:::external
+  CHG --> OR[(OpenRouter<br/>DeepSeek V3 · Llama 3.3 70B :free)]:::llm
 
   classDef frontend fill:#DBEAFE,stroke:#2563EB,color:#1E3A8A,stroke-width:1.5px;
-  classDef proxy fill:#E0F2FE,stroke:#0284C7,color:#0C4A6E,stroke-width:1.5px;
   classDef overview fill:#DCFCE7,stroke:#16A34A,color:#14532D,stroke-width:1.2px;
   classDef market fill:#FEF3C7,stroke:#D97706,color:#78350F,stroke-width:1.2px;
-  classDef chat fill:#FCE7F3,stroke:#DB2777,color:#831843,stroke-width:1.2px;
-  classDef pbi fill:#EDE9FE,stroke:#7C3AED,color:#4C1D95,stroke-width:1.2px;
+  classDef health fill:#FCE7F3,stroke:#DB2777,color:#831843,stroke-width:1.2px;
+  classDef alloc fill:#EDE9FE,stroke:#7C3AED,color:#4C1D95,stroke-width:1.2px;
+  classDef chat fill:#E0F2FE,stroke:#0284C7,color:#0C4A6E,stroke-width:1.2px;
   classDef db fill:#FFF7ED,stroke:#EA580C,color:#9A3412,stroke-width:1.5px;
   classDef llm fill:#F3E8FF,stroke:#7E22CE,color:#3B0764,stroke-width:1.5px;
-  classDef external fill:#CCFBF1,stroke:#0F766E,color:#134E4A,stroke-width:1.5px;
 ```
-
