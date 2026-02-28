@@ -60,6 +60,8 @@ jobs:
             --name "${{ secrets.CONTAINERAPP_NAME }}" \
             --resource-group "${{ secrets.RESOURCE_GROUP }}" \
             --image "$SHA_TAG" \
+            --min-replicas 1 \
+            --max-replicas 1 \
             --set-env-vars \
               "DATABASE_URL=secretref:dburl" \
               "OPENROUTER_API_KEY=secretref:openrouter-key" \
