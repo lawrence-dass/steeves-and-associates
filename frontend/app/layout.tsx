@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Sidebar from "@/components/layout/Sidebar";
-import Topbar from "@/components/layout/Topbar";
 import MobileNav from "@/components/layout/MobileNav";
 
 export const metadata: Metadata = {
@@ -18,8 +17,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Sidebar />
-        <Topbar />
-        <main className="min-h-screen px-4 pb-24 pt-20 sm:px-6 lg:ml-[250px] lg:pb-8 lg:pt-24">
+        <main className="min-h-screen px-4 pb-24 pt-6 sm:px-6 lg:ml-[250px] lg:pb-8 lg:pt-8">
           {children}
         </main>
         <MobileNav />

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -10,10 +11,16 @@ export default function Sidebar() {
 
   return (
     <aside className="fixed left-0 top-0 z-40 hidden h-screen w-[250px] flex-col bg-steeves-navy text-white lg:flex">
-      <div className="px-7 py-6 border-b border-white/10">
-        <h1 className="text-[30px] font-extrabold tracking-tight leading-none">S&A</h1>
-        <p className="mt-1 text-[18px] font-semibold tracking-wide">Steeves &amp; Associates</p>
-        <p className="text-xs text-white/55 mt-1">Analytics Dashboard</p>
+      <div className="px-7 py-5 border-b border-white/10">
+        <Image
+          src="/steeves-logo.svg"
+          alt="Steeves & Associates"
+          width={144}
+          height={54}
+          className="h-10 w-auto brightness-0 invert"
+          priority
+        />
+        <p className="text-xs text-white/55 mt-2">Analytics Dashboard</p>
       </div>
 
       <div className="px-6 pt-5 pb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/45">
@@ -41,8 +48,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="px-6 py-4 border-t border-white/10 text-xs text-white/40">
-        <p>ALY6080 Capstone</p>
-        <p>Group 2</p>
+        <p>ALY6980 Capstone · NEU</p>
       </div>
     </aside>
   );
