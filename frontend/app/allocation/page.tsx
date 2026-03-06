@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { fetchApi, postApi } from "@/lib/api";
-import { UsersRound, WandSparkles } from "lucide-react";
+import { Info, Search, UsersRound, WandSparkles, X } from "lucide-react";
 
 interface AllocationInputs {
   customers: string[];
@@ -20,12 +20,24 @@ interface Recommendation {
   rationale: string;
 }
 
+const SCORE_WEIGHTS = { experience: 35, performance: 30, availability: 20, collaboration: 15 };
+
+function ScoreBar({ value, color }: { value: number; color: string }) {
+  return (
+    <div className="w-full bg-steeves-border rounded-full h-1.5 mt-1">
+      <div className="h-1.5 rounded-full transition-all" style={{ width: `${value}%`, backgroundColor: color }} />
+    </div>
+  );
+}
+
 export default function AllocationPage() {
   const [inputs, setInputs] = useState<AllocationInputs>({ customers: [], resources: [], categories: [] });
   const [customerName, setCustomerName] = useState("");
   const [category, setCategory] = useState("");
-  const [existingTeam, setExistingTeam] = useState<string[]>([]);
+  const [alreadyAssigned, setAlreadyAssigned] = useState<string[]>([]);
   const [topN, setTopN] = useState(5);
+  const [teamSearch, setTeamSearch] = useState("");
+  const [showTooltip, setShowTooltip] = useState(false);
 
   const [results, setResults] = useState<Recommendation[]>([]);
   const [loadingInputs, setLoadingInputs] = useState(true);
@@ -34,7 +46,6 @@ export default function AllocationPage() {
 
   useEffect(() => {
     let active = true;
-
     async function loadInputs() {
       try {
         const response = await fetchApi<AllocationInputs>("/api/allocation/inputs");
@@ -46,31 +57,36 @@ export default function AllocationPage() {
         if (!active) return;
         setError(err instanceof Error ? err.message : "Failed to load allocation inputs");
       } finally {
-        if (active) {
-          setLoadingInputs(false);
-        }
+        if (active) setLoadingInputs(false);
       }
     }
-
     loadInputs();
-
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, []);
 
   const canSubmit = useMemo(() => customerName.trim().length > 0 && !loadingResults, [customerName, loadingResults]);
 
+  const filteredResources = useMemo(
+    () => inputs.resources.filter((r) => r.toLowerCase().includes(teamSearch.toLowerCase())),
+    [inputs.resources, teamSearch]
+  );
+
+  // Exclude already-assigned members from recommendations
+  const visibleResults = useMemo(
+    () => results.filter((r) => !alreadyAssigned.includes(r.resource)),
+    [results, alreadyAssigned]
+  );
+
   async function runRecommendation() {
     if (!canSubmit) return;
-
     setLoadingResults(true);
     try {
+      // Request extra results to account for excluded already-assigned members
       const response = await postApi<Recommendation[]>("/api/allocation/recommend", {
         customer_name: customerName,
         category: category || null,
-        existing_team: existingTeam,
-        top_n: topN,
+        existing_team: alreadyAssigned,
+        top_n: topN + alreadyAssigned.length,
       });
       setResults(response);
       setError(null);
@@ -81,9 +97,9 @@ export default function AllocationPage() {
     }
   }
 
-  function toggleTeamMember(member: string) {
-    setExistingTeam((prev) =>
-      prev.includes(member) ? prev.filter((item) => item !== member) : [...prev, member]
+  function toggleMember(member: string) {
+    setAlreadyAssigned((prev) =>
+      prev.includes(member) ? prev.filter((m) => m !== member) : [...prev, member]
     );
   }
 
@@ -103,6 +119,7 @@ export default function AllocationPage() {
       )}
 
       <div className="grid grid-cols-1 xl:grid-cols-[1.1fr,1.9fr] gap-6">
+        {/* ── Input panel ── */}
         <div className="vz-card p-5 space-y-4">
           <div className="flex items-center gap-2">
             <UsersRound size={17} className="text-steeves-navy" />
@@ -118,12 +135,10 @@ export default function AllocationPage() {
                 <select
                   className="vz-input mt-1 w-full"
                   value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
+                  onChange={(e) => { setCustomerName(e.target.value); setResults([]); }}
                 >
-                  {inputs.customers.map((customer) => (
-                    <option key={customer} value={customer}>
-                      {customer}
-                    </option>
+                  {inputs.customers.map((c) => (
+                    <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
               </label>
@@ -136,15 +151,13 @@ export default function AllocationPage() {
                   onChange={(e) => setCategory(e.target.value)}
                 >
                   {inputs.categories.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
+                    <option key={item} value={item}>{item}</option>
                   ))}
                 </select>
               </label>
 
               <label className="text-xs font-medium text-steeves-muted block">
-                Number of Recommendations: <span className="text-steeves-ink">{topN}</span>
+                Results to show: <span className="text-steeves-ink font-semibold">{topN}</span>
                 <input
                   type="range"
                   min={1}
@@ -155,23 +168,87 @@ export default function AllocationPage() {
                 />
               </label>
 
+              {/* Already-assigned section */}
               <div>
-                <p className="text-xs font-medium text-steeves-muted mb-2">Existing Team (optional)</p>
-                <div className="max-h-44 overflow-y-auto rounded-lg border border-steeves-border p-2 space-y-1">
-                  {inputs.resources.map((resource) => {
-                    const checked = existingTeam.includes(resource);
-                    return (
-                      <label key={resource} className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-steeves-light/60">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleTeamMember(resource)}
-                          className="accent-steeves-blue"
-                        />
-                        <span className="text-sm text-steeves-ink">{resource}</span>
-                      </label>
-                    );
-                  })}
+                <div className="flex items-center gap-1.5 mb-1">
+                  <p className="text-xs font-medium text-steeves-muted">Already Assigned to Project</p>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onMouseEnter={() => setShowTooltip(true)}
+                      onMouseLeave={() => setShowTooltip(false)}
+                      className="text-steeves-muted hover:text-steeves-navy"
+                    >
+                      <Info size={13} />
+                    </button>
+                    {showTooltip && (
+                      <div className="absolute left-5 top-0 z-10 w-60 rounded-lg border border-steeves-border bg-white p-3 shadow-lg text-xs text-steeves-ink leading-relaxed">
+                        Consultants you select here are <strong>already committed</strong> to this project.
+                        The model will surface colleagues who have <strong>worked well with them before</strong> — boosting the Collaboration score (15% of composite).
+                        Selected members are excluded from recommendations.
+                      </div>
+                    )}
+                  </div>
+                  {alreadyAssigned.length > 0 && (
+                    <span className="ml-auto text-[11px] font-medium text-steeves-blue">
+                      {alreadyAssigned.length} selected
+                    </span>
+                  )}
+                </div>
+
+                {/* Selected chips */}
+                {alreadyAssigned.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {alreadyAssigned.map((m) => (
+                      <span
+                        key={m}
+                        className="inline-flex items-center gap-1 rounded-full bg-steeves-blue/10 px-2 py-0.5 text-[11px] font-medium text-steeves-blue"
+                      >
+                        {m.split(" ")[0]}
+                        <button type="button" onClick={() => toggleMember(m)} className="hover:text-steeves-navy">
+                          <X size={10} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Search box */}
+                <div className="relative mb-1">
+                  <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-steeves-muted" />
+                  <input
+                    type="text"
+                    placeholder="Search consultants…"
+                    value={teamSearch}
+                    onChange={(e) => setTeamSearch(e.target.value)}
+                    className="vz-input w-full pl-7 py-1.5 text-xs"
+                  />
+                </div>
+
+                <div className="max-h-40 overflow-y-auto rounded-lg border border-steeves-border p-2 space-y-0.5">
+                  {filteredResources.length === 0 ? (
+                    <p className="text-xs text-steeves-muted px-2 py-1">No match</p>
+                  ) : (
+                    filteredResources.map((resource) => {
+                      const checked = alreadyAssigned.includes(resource);
+                      return (
+                        <label
+                          key={resource}
+                          className={`flex items-center gap-2 rounded-md px-2 py-1 cursor-pointer transition-colors ${
+                            checked ? "bg-steeves-blue/8 text-steeves-blue" : "hover:bg-steeves-light/60 text-steeves-ink"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleMember(resource)}
+                            className="accent-steeves-blue"
+                          />
+                          <span className="text-sm">{resource}</span>
+                        </label>
+                      );
+                    })
+                  )}
                 </div>
               </div>
 
@@ -179,59 +256,71 @@ export default function AllocationPage() {
                 type="button"
                 onClick={runRecommendation}
                 disabled={!canSubmit}
-                className="inline-flex items-center justify-center gap-2 w-full rounded-md bg-steeves-blue px-4 py-2.5 text-sm font-medium text-white hover:bg-steeves-navy disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center gap-2 w-full rounded-md bg-steeves-blue px-4 py-2.5 text-sm font-medium text-white hover:bg-steeves-navy disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <WandSparkles size={15} />
-                {loadingResults ? "Running..." : "Generate Recommendations"}
+                {loadingResults ? "Running…" : "Generate Recommendations"}
               </button>
             </>
           )}
         </div>
 
+        {/* ── Results panel ── */}
         <div className="vz-card p-5">
-          <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center justify-between gap-3 mb-1">
             <h2 className="text-sm font-semibold text-[#495057]">Top Recommendations</h2>
-            <p className="text-xs text-steeves-muted">{results.length} resources ranked</p>
+            <p className="text-xs text-steeves-muted">{visibleResults.length} consultants ranked</p>
           </div>
 
-          {results.length === 0 ? (
-            <div className="h-[360px] flex items-center justify-center text-sm text-steeves-muted">
-              Run the model to view ranked consultant recommendations.
+          {/* Score legend */}
+          {visibleResults.length > 0 && (
+            <div className="flex flex-wrap gap-3 mb-4 text-[11px] text-steeves-muted">
+              {(Object.entries(SCORE_WEIGHTS) as [string, number][]).map(([key, weight]) => (
+                <span key={key} className="capitalize">{key} <span className="font-medium text-steeves-ink">{weight}%</span></span>
+              ))}
+            </div>
+          )}
+
+          {visibleResults.length === 0 ? (
+            <div className="h-[360px] flex flex-col items-center justify-center gap-2 text-sm text-steeves-muted">
+              <WandSparkles size={28} className="opacity-30" />
+              <p>Select a customer and generate recommendations.</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {results.map((row, index) => (
-                <div key={row.resource} className="rounded-lg border border-steeves-border p-4 bg-white">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-steeves-ink">
-                        #{index + 1} {row.resource}
-                      </p>
-                      <p className="text-xs text-steeves-muted mt-1">{row.rationale}</p>
+              {visibleResults.slice(0, topN).map((row, index) => (
+                <div key={row.resource} className="rounded-lg border border-steeves-border p-4 bg-white hover:border-steeves-blue/40 transition-colors">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-semibold text-white bg-steeves-navy rounded-full w-5 h-5 flex items-center justify-center shrink-0">
+                          {index + 1}
+                        </span>
+                        <p className="text-sm font-semibold text-steeves-ink truncate">{row.resource}</p>
+                      </div>
+                      <p className="text-xs text-steeves-muted mt-1 ml-7">{row.rationale}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[22px] leading-none font-semibold text-steeves-navy">{row.score}</p>
-                      <p className="text-[11px] text-steeves-muted mt-1">Composite</p>
+                    <div className="text-right shrink-0">
+                      <p className="text-[24px] leading-none font-bold text-steeves-navy">{row.score}</p>
+                      <p className="text-[11px] text-steeves-muted mt-0.5">/ 100</p>
                     </div>
                   </div>
 
-                  <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                    <div className="rounded-md border border-steeves-border p-2">
-                      <p className="text-steeves-muted">Experience</p>
-                      <p className="text-sm font-semibold text-steeves-ink">{row.experience}</p>
-                    </div>
-                    <div className="rounded-md border border-steeves-border p-2">
-                      <p className="text-steeves-muted">Performance</p>
-                      <p className="text-sm font-semibold text-steeves-ink">{row.performance}</p>
-                    </div>
-                    <div className="rounded-md border border-steeves-border p-2">
-                      <p className="text-steeves-muted">Availability</p>
-                      <p className="text-sm font-semibold text-steeves-ink">{row.availability}</p>
-                    </div>
-                    <div className="rounded-md border border-steeves-border p-2">
-                      <p className="text-steeves-muted">Collaboration</p>
-                      <p className="text-sm font-semibold text-steeves-ink">{row.collaboration}</p>
-                    </div>
+                  <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs ml-7">
+                    {[
+                      { label: "Experience", value: row.experience, color: "#405189" },
+                      { label: "Performance", value: row.performance, color: "#0ab39c" },
+                      { label: "Availability", value: row.availability, color: "#f7b84b" },
+                      { label: "Collaboration", value: row.collaboration, color: "#3577f1" },
+                    ].map(({ label, value, color }) => (
+                      <div key={label}>
+                        <div className="flex justify-between">
+                          <span className="text-steeves-muted">{label}</span>
+                          <span className="font-semibold text-steeves-ink">{value}</span>
+                        </div>
+                        <ScoreBar value={value} color={color} />
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
