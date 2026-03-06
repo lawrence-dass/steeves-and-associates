@@ -298,12 +298,12 @@ def generate_with_openrouter(
     user_prompt: str,
     conversation_history: Sequence[dict] | None = None,
 ) -> tuple[str | None, str | None]:
-    """Call OpenRouter chat completions."""
-    client, init_error = get_openrouter_client()
-    if client is None:
-        return None, init_error
+    """Call OpenRouter chat completions via requests (bypasses httpx ASCII header checks)."""
+    api_key = (os.getenv("OPENROUTER_API_KEY") or "").strip()
+    if not api_key:
+        return None, "`OPENROUTER_API_KEY` is not set for the running backend process."
 
-    model_name, extra_headers, timeout_sec = get_openrouter_config()
+    model_name, _, timeout_sec = get_openrouter_config()
     messages = [
         {"role": "system", "content": _ascii_safe(system_prompt)},
         *[
@@ -313,20 +313,30 @@ def generate_with_openrouter(
         {"role": "user", "content": _ascii_safe(user_prompt)},
     ]
 
-    try:
-        response = client.chat.completions.create(
-            model=model_name,
-            messages=messages,
-            temperature=0.2,
-            max_tokens=1000,
-            extra_headers=extra_headers or None,
-            timeout=timeout_sec,
-        )
-    except Exception as exc:
-        return None, f"OpenRouter request failed: {exc}"
+    payload_bytes = json.dumps(
+        {"model": model_name, "messages": messages, "temperature": 0.2, "max_tokens": 1000},
+        ensure_ascii=True,
+    ).encode("ascii")
 
     try:
-        content = (response.choices[0].message.content or "").strip()
+        resp = requests.post(
+            f"{OPENROUTER_BASE_URL}/chat/completions",
+            data=payload_bytes,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            timeout=timeout_sec,
+        )
+    except requests.RequestException as exc:
+        return None, f"OpenRouter request failed: {exc}"
+
+    if not resp.ok:
+        return None, f"OpenRouter API error {resp.status_code}: {resp.text[:300]}"
+
+    try:
+        content = (resp.json()["choices"][0]["message"]["content"] or "").strip()
     except Exception:
         content = ""
 
