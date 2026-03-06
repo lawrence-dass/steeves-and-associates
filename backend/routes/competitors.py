@@ -282,25 +282,54 @@ def by_location():
     return jsonify(result)
 
 
+EMPLOYEE_BANDS = [
+    (0,   10,  "1–10"),
+    (10,  20,  "11–20"),
+    (20,  30,  "21–30"),
+    (30,  40,  "31–40"),
+    (40,  50,  "41–50"),
+    (50,  60,  "51–60"),
+    (60,  70,  "61–70"),
+    (70,  80,  "71–80"),
+    (80,  90,  "81–90"),
+    (90,  100, "91–100"),
+    (100, float("inf"), "100+"),
+]
+
+
+def normalize_employee_band(midpoint):
+    """Map a numeric employee midpoint to a standardised band label."""
+    if midpoint is None:
+        return "Unknown"
+    for low, high, label in EMPLOYEE_BANDS:
+        if low < midpoint <= high:
+            return label
+    if midpoint == 0:
+        return EMPLOYEE_BANDS[0][2]
+    return "Unknown"
+
+
 @competitors_bp.route("/by-size")
 def by_size():
-    """Companies grouped by employee band for the current filtered set."""
+    """Companies grouped by normalised employee band for the current filtered set."""
     _, filtered_rows = get_rows_with_filters()
 
     groups = defaultdict(list)
     for row in filtered_rows:
-        groups[row.get("num_employees") or "Unknown"].append(row.get("company_name"))
+        band = normalize_employee_band(row.get("employee_size_num"))
+        groups[band].append(row.get("company_name"))
 
+    band_order = [label for _, _, label in EMPLOYEE_BANDS] + ["Unknown"]
     result = [
         {
-            "num_employees": size_band,
-            "count": len(companies),
-            "companies": sorted(companies),
+            "num_employees": band,
+            "count": len(groups[band]),
+            "companies": sorted(groups[band]),
         }
-        for size_band, companies in groups.items()
+        for band in band_order
+        if band in groups
     ]
 
-    result.sort(key=lambda item: (-item["count"], item["num_employees"]))
     return jsonify(result)
 
 

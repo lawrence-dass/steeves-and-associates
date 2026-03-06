@@ -11,13 +11,15 @@ chat_bp = Blueprint("chat", __name__)
 @chat_bp.route("/message", methods=["POST"])
 def send_message():
     """Send a message to the AI chat assistant."""
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     message = data.get("message", "").strip()
     session_id = data.get("session_id", "default")
     conversation_history = data.get("history", [])
-    
+
     if not message:
         return jsonify({"error": "Message is required"}), 400
+    if len(message) > 2000:
+        return jsonify({"error": "Message too long (max 2000 characters)"}), 400
     
     # Get AI response
     result = chat(message, conversation_history)
@@ -42,7 +44,9 @@ def send_message():
 
 @chat_bp.route("/history/<session_id>")
 def get_history(session_id):
-    """Get chat history for a session."""
+    """Get chat history for a session. Rejects trivially guessable IDs."""
+    if len(session_id) < 8:
+        return jsonify({"error": "Invalid session ID"}), 400
     result = query("""
         SELECT role, content, data_source, created_at
         FROM chat_history

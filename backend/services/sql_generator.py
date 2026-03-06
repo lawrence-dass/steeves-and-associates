@@ -44,6 +44,7 @@ Rules:
 """
 
 FORBIDDEN_KEYWORDS = {
+    # DML / DDL
     "INSERT",
     "UPDATE",
     "DELETE",
@@ -53,6 +54,16 @@ FORBIDDEN_KEYWORDS = {
     "CREATE",
     "GRANT",
     "REVOKE",
+    # PostgreSQL system / file-access functions
+    "PG_READ_FILE",
+    "PG_LS_DIR",
+    "PG_READ_BINARY_FILE",
+    "PG_STAT_FILE",
+    "CURRENT_SETTING",
+    "SET_CONFIG",
+    "PG_SLEEP",
+    "COPY",
+    "EXECUTE",
 }
 
 
