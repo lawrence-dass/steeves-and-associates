@@ -5,10 +5,10 @@ sequenceDiagram
   autonumber
   actor U as User
   participant UI as Next.js Chat UI (Vercel)
-  participant API as Flask /api/chat/message (Azure Container Apps)
-  participant DB as PostgreSQL (Azure · Canada Central)
+  participant API as "Flask /api/chat/message"
+  participant DB as PostgreSQL
   participant OR as OpenRouter
-  participant FREE as Llama 3.3 70B :free
+  participant FREE as "Llama 3.3 70B (free)"
   participant PAID as DeepSeek V3
 
   U->>UI: Submit question
