@@ -18,15 +18,16 @@ else:
 
 def get_cors_origins():
     """
-    Allow local frontend origins in development.
-    Override with CORS_ORIGINS (comma-separated exact origins) if needed.
+    Return allowed CORS origins.
+    In production CORS_ORIGINS must be set (comma-separated exact origins).
+    Falls back to localhost only so a missing env var never opens the API to all origins.
     """
     raw = os.getenv("CORS_ORIGINS", "").strip()
     if raw:
         return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
-    # Default for local development: allow all origins.
-    return "*"
+    # Safe local-dev default — never fall back to "*" in case env var is missing in prod.
+    return ["http://localhost:3000", "http://127.0.0.1:3000"]
 
 def create_app():
     app = Flask(__name__)

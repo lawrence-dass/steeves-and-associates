@@ -78,8 +78,7 @@ INTENT_CLASSIFIER_PROMPT = """Classify this user message into exactly one catego
 
 Respond with only the category name.
 
-User message: {user_message}
-"""
+User message: """
 
 SQL_NARRATOR_PROMPT = """You are translating SQL results into a business answer.
 Provide:
@@ -194,6 +193,11 @@ def get_openrouter_client():
         return None, openrouter_client_init_error
 
 
+def _ascii_safe(text: str) -> str:
+    """Replace non-ASCII characters with their Unicode escape sequences."""
+    return text.encode("ascii", errors="backslashreplace").decode("ascii")
+
+
 def get_openrouter_config() -> tuple[str, dict, int]:
     """Return OpenRouter model and optional headers."""
     model_name = (os.getenv("OPENROUTER_MODEL") or OPENROUTER_DEFAULT_MODEL).strip()
@@ -202,9 +206,9 @@ def get_openrouter_config() -> tuple[str, dict, int]:
     referer = (os.getenv("OPENROUTER_HTTP_REFERER") or "").strip()
     title = (os.getenv("OPENROUTER_APP_TITLE") or "").strip()
     if referer:
-        extra_headers["HTTP-Referer"] = referer
+        extra_headers["HTTP-Referer"] = _ascii_safe(referer)
     if title:
-        extra_headers["X-Title"] = title
+        extra_headers["X-Title"] = _ascii_safe(title)
     return model_name, extra_headers, timeout_sec
 
 
@@ -301,9 +305,12 @@ def generate_with_openrouter(
 
     model_name, extra_headers, timeout_sec = get_openrouter_config()
     messages = [
-        {"role": "system", "content": system_prompt},
-        *history_to_ollama_messages(conversation_history),
-        {"role": "user", "content": user_prompt},
+        {"role": "system", "content": _ascii_safe(system_prompt)},
+        *[
+            {"role": m["role"], "content": _ascii_safe(m["content"])}
+            for m in history_to_ollama_messages(conversation_history)
+        ],
+        {"role": "user", "content": _ascii_safe(user_prompt)},
     ]
 
     try:
@@ -435,7 +442,7 @@ def classify_chat_intent(message: str, conversation_history: Sequence[dict] | No
 
     classifier_response, err = llm_generate(
         GENERAL_ASSISTANT_PROMPT,
-        INTENT_CLASSIFIER_PROMPT.format(user_message=message),
+        INTENT_CLASSIFIER_PROMPT + message,
         conversation_history,
     )
 
