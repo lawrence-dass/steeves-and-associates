@@ -3,6 +3,7 @@ import {
   Globe,
   HeartPulse,
   MessageSquare,
+  Network,
   UsersRound,
 } from "lucide-react";
 
@@ -12,4 +13,5 @@ export const navItems = [
   { href: "/client-health", label: "Client Health", icon: HeartPulse },
   { href: "/allocation", label: "Allocation", icon: UsersRound },
   { href: "/chat", label: "AI Chat", icon: MessageSquare },
+  { href: "/architecture", label: "Architecture", icon: Network },
 ];
