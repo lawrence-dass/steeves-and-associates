@@ -328,6 +328,67 @@ export default function AllocationPage() {
           )}
         </div>
       </div>
+
+      {/* ── How it works ── */}
+      <div className="vz-card p-6">
+        <h2 className="text-sm font-semibold text-[#495057] mb-4">How This Feature Works</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-white bg-[#405189] rounded-full w-5 h-5 flex items-center justify-center shrink-0">1</span>
+              <p className="text-xs font-semibold text-steeves-ink">Experience <span className="font-normal text-steeves-muted">(35%)</span></p>
+            </div>
+            <p className="text-xs text-steeves-muted leading-relaxed pl-7">
+              Measures how many hours a consultant has logged with this specific customer and in the selected service category. Higher prior engagement means a higher score.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-white bg-[#0ab39c] rounded-full w-5 h-5 flex items-center justify-center shrink-0">2</span>
+              <p className="text-xs font-semibold text-steeves-ink">Performance <span className="font-normal text-steeves-muted">(30%)</span></p>
+            </div>
+            <p className="text-xs text-steeves-muted leading-relaxed pl-7">
+              Derived from the consultant's average revenue per billable hour across all historical work. A higher billing rate relative to hours signals strong value delivery.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-white bg-[#f7b84b] rounded-full w-5 h-5 flex items-center justify-center shrink-0">3</span>
+              <p className="text-xs font-semibold text-steeves-ink">Availability <span className="font-normal text-steeves-muted">(20%)</span></p>
+            </div>
+            <p className="text-xs text-steeves-muted leading-relaxed pl-7">
+              Compares the consultant's billable hours in the last 30 days against their long-term monthly average. A lower recent load suggests more capacity to take on new work.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-white bg-[#3577f1] rounded-full w-5 h-5 flex items-center justify-center shrink-0">4</span>
+              <p className="text-xs font-semibold text-steeves-ink">Collaboration <span className="font-normal text-steeves-muted">(15%)</span></p>
+            </div>
+            <p className="text-xs text-steeves-muted leading-relaxed pl-7">
+              Only applies when you mark consultants as <em>Already Assigned</em>. The model counts how many past projects each candidate has shared with the assigned team — surfacing colleagues who work well together.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 pt-4 border-t border-steeves-border grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-steeves-muted">
+          <div>
+            <p className="font-semibold text-steeves-ink mb-1">Data source</p>
+            <p className="leading-relaxed">All scores are computed from 17,792 time-entry records spanning 2020–2025. No manual ratings are used — everything is derived from actual billing history.</p>
+          </div>
+          <div>
+            <p className="font-semibold text-steeves-ink mb-1">Already Assigned tip</p>
+            <p className="leading-relaxed">Tick the consultants already committed to this engagement before generating results. They will be excluded from recommendations and their presence will boost candidates who have collaborated with them historically.</p>
+          </div>
+          <div>
+            <p className="font-semibold text-steeves-ink mb-1">Composite score</p>
+            <p className="leading-relaxed">The final score (0–100) is a weighted sum: Experience × 0.35 + Performance × 0.30 + Availability × 0.20 + Collaboration × 0.15. Use it as a starting point — local context and availability should always inform the final decision.</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
