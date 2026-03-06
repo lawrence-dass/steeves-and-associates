@@ -14,13 +14,13 @@ flowchart LR
   end
 
   subgraph BE["Flask API — Azure Container Apps"]
-    HEALTH[/api/health]:::backend
-    OVAPI[/api/overview/*]:::backend
-    CPAPI[/api/competitors/*]:::backend
-    CLAPI[/api/client-health/*]:::backend
-    ALAPI[/api/allocation/*]:::backend
-    CHATAPI[/api/chat/*]:::backend
-    SERV[Service Layer<br/>gemini_chat · client_health<br/>resource_allocator · sql_generator]:::backend
+    HEALTH["/api/health"]:::backend
+    OVAPI["/api/overview/*"]:::backend
+    CPAPI["/api/competitors/*"]:::backend
+    CLAPI["/api/client-health/*"]:::backend
+    ALAPI["/api/allocation/*"]:::backend
+    CHATAPI["/api/chat/*"]:::backend
+    SERV["Service Layer<br/>gemini_chat · client_health<br/>resource_allocator · sql_generator"]:::backend
   end
 
   subgraph DATA["Data Layer — Azure PostgreSQL (Canada Central)"]
