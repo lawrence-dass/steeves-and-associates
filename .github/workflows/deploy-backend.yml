@@ -67,4 +67,5 @@ jobs:
               "OPENROUTER_API_KEY=secretref:openrouter-key" \
               "LLM_PROVIDER=openrouter" \
               "FLASK_ENV=production" \
-              "CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}"
+              "CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}" \
+              "PYTHONUTF8=1"
