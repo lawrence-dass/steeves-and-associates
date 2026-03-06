@@ -1,7 +1,8 @@
-# System Architecture Diagram
+"use client";
 
-```mermaid
-flowchart LR
+import { useEffect, useRef } from "react";
+
+const DIAGRAM = `flowchart LR
   U[Users<br/>Consultants, Managers, Faculty]:::actor
 
   subgraph FE["Next.js Frontend — Vercel"]
@@ -24,20 +25,20 @@ flowchart LR
   end
 
   subgraph DATA["Data Layer — Azure PostgreSQL (Canada Central)"]
-    PG[(steeves_capstone<br/>time_entries · competitors · chat_history)]:::database
+    PG[("steeves_capstone<br/>time_entries · competitors · chat_history")]:::database
     SEED[database/seed.py]:::database
     XLSX[Steeves_and_Associates_2020_2025.xlsx<br/>17,792 rows]:::source
     CSV[microsoft-azure-partners-canada__new_1.csv<br/>50 companies]:::source
   end
 
   subgraph AI["LLM — OpenRouter"]
-    LLAMA[(Llama 3.3 70B :free<br/>Intent classification)]:::llm
-    DEEP[(DeepSeek V3<br/>SQL generation · Narration)]:::llm
+    LLAMA[("Llama 3.3 70B (free)<br/>Intent classification")]:::llm
+    DEEP[("DeepSeek V3<br/>SQL generation · Narration")]:::llm
   end
 
   subgraph INFRA["Azure Infrastructure"]
-    ACR[(Container Registry<br/>steevesassociatesacr)]:::infra
-    CAE[(Container Apps Env<br/>steeves-and-associates-env)]:::infra
+    ACR[("Container Registry<br/>steevesassociatesacr")]:::infra
+    CAE[("Container Apps Env<br/>steeves-and-associates-env")]:::infra
   end
 
   subgraph CICD["CI/CD — GitHub Actions"]
@@ -72,5 +73,54 @@ flowchart LR
   classDef source fill:#FFF7ED,stroke:#EA580C,color:#9A3412,stroke-width:1.5px;
   classDef llm fill:#FCE7F3,stroke:#DB2777,color:#831843,stroke-width:1.5px;
   classDef infra fill:#E0F2FE,stroke:#0284C7,color:#0C4A6E,stroke-width:1.5px;
-  classDef cicd fill:#DCFCE7,stroke:#16A34A,color:#14532D,stroke-width:1.5px;
-```
+  classDef cicd fill:#DCFCE7,stroke:#16A34A,color:#14532D,stroke-width:1.5px;`;
+
+export default function ArchitecturePage() {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function render() {
+      const { default: mermaid } = await import("mermaid");
+      if (cancelled || !ref.current) return;
+
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: "default",
+        flowchart: { useMaxWidth: true, htmlLabels: true },
+      });
+
+      try {
+        const { svg } = await mermaid.render("arch-diagram", DIAGRAM);
+        if (!cancelled && ref.current) {
+          ref.current.innerHTML = svg;
+        }
+      } catch (err) {
+        console.error("Mermaid render error:", err);
+      }
+    }
+
+    render();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="vz-title">System Architecture</h1>
+        <p className="vz-subtitle mt-1">
+          End-to-end data flow across frontend, API, database, LLM providers, and CI/CD
+        </p>
+      </div>
+
+      <div className="vz-card p-6 overflow-x-auto">
+        <div ref={ref} className="min-w-[700px]">
+          <p className="text-sm text-steeves-muted">Rendering diagram...</p>
+        </div>
+      </div>
+    </div>
+  );
+}

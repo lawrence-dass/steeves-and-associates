@@ -29,7 +29,7 @@ flowchart TD
   H2 -->|resource_recommend| H5[Ranked staffing suggestions]:::insight
   H2 -->|document_qa| H6[Contextual answer from<br/>operational + competitive data]:::insight
 
-  D2 --> Z((Decision & Action)):::end
+  D2 --> Z((Decision & Action)):::finish
   E2 --> Z
   F2 --> Z
   G2 --> Z
@@ -39,7 +39,7 @@ flowchart TD
   H6 --> Z
 
   classDef start fill:#DCFCE7,stroke:#16A34A,color:#14532D,stroke-width:2px;
-  classDef end fill:#DBEAFE,stroke:#2563EB,color:#1E3A8A,stroke-width:2px;
+  classDef finish fill:#DBEAFE,stroke:#2563EB,color:#1E3A8A,stroke-width:2px;
   classDef page fill:#E0F2FE,stroke:#0284C7,color:#0C4A6E,stroke-width:1.5px;
   classDef action fill:#FEF3C7,stroke:#D97706,color:#78350F,stroke-width:1.5px;
   classDef decision fill:#FCE7F3,stroke:#DB2777,color:#831843,stroke-width:1.5px;

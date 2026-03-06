@@ -62,4 +62,3 @@ flowchart TD
 - Runner is `ubuntu-latest` (amd64) — image is natively compatible with Azure Container Apps, no `--platform` flag needed
 - `DATABASE_URL` and `OPENROUTER_API_KEY` are stored as Container App secrets (`secretref:`) to avoid shell-interpolating special characters
 - Both `:sha` and `:latest` tags are pushed; the SHA tag is what gets deployed (immutable, traceable per commit)
-```
