@@ -194,8 +194,8 @@ def get_openrouter_client():
 
 
 def _ascii_safe(text: str) -> str:
-    """Replace non-ASCII characters with their Unicode escape sequences."""
-    return text.encode("ascii", errors="backslashreplace").decode("ascii")
+    """Strip non-ASCII characters so the OpenRouter HTTP transport never sees them."""
+    return (text or "").encode("ascii", errors="ignore").decode("ascii")
 
 
 def get_openrouter_config() -> tuple[str, dict, int]:
