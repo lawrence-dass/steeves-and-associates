@@ -349,7 +349,7 @@ export default function AllocationPage() {
               <p className="text-xs font-semibold text-steeves-ink">Performance <span className="font-normal text-steeves-muted">(30%)</span></p>
             </div>
             <p className="text-xs text-steeves-muted leading-relaxed pl-7">
-              Derived from the consultant's average revenue per billable hour across all historical work. A higher billing rate relative to hours signals strong value delivery.
+              Derived from the consultant&apos;s average revenue per billable hour across all historical work. A higher billing rate relative to hours signals strong value delivery.
             </p>
           </div>
 
@@ -359,7 +359,7 @@ export default function AllocationPage() {
               <p className="text-xs font-semibold text-steeves-ink">Availability <span className="font-normal text-steeves-muted">(20%)</span></p>
             </div>
             <p className="text-xs text-steeves-muted leading-relaxed pl-7">
-              Compares the consultant's billable hours in the last 30 days against their long-term monthly average. A lower recent load suggests more capacity to take on new work.
+              Compares the consultant&apos;s billable hours in the last 30 days against their long-term monthly average. A lower recent load suggests more capacity to take on new work.
             </p>
           </div>
 
