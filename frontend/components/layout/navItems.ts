@@ -2,6 +2,7 @@ import {
   BarChart3,
   Globe,
   HeartPulse,
+  Layers,
   MessageSquare,
   Network,
   UsersRound,
@@ -14,4 +15,5 @@ export const navItems = [
   { href: "/allocation", label: "Allocation", icon: UsersRound },
   { href: "/chat", label: "AI Chat", icon: MessageSquare },
   { href: "/architecture", label: "Architecture", icon: Network },
+  { href: "/tech-stack", label: "Tech Stack", icon: Layers },
 ];
