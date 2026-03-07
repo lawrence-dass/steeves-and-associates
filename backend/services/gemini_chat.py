@@ -300,6 +300,7 @@ def generate_with_openrouter(
 ) -> tuple[str | None, str | None]:
     """Call OpenRouter chat completions via requests (bypasses httpx ASCII header checks)."""
     api_key = (os.getenv("OPENROUTER_API_KEY") or "").strip()
+    api_key = api_key.encode("ascii", errors="ignore").decode("ascii")  # strip any non-ASCII copied into secret
     if not api_key:
         return None, "`OPENROUTER_API_KEY` is not set for the running backend process."
 
