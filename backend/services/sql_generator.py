@@ -41,6 +41,12 @@ Rules:
 5. Use SUM(extended_price) for revenue and SUM(billable_hours) for utilization questions.
 6. For quarter logic, use EXTRACT(QUARTER FROM worked_date).
 7. Return only SQL text, no explanations or markdown fences.
+8. NEVER use UNION or UNION ALL between time_entries and competitors — their column types are
+   incompatible (time_entries has numeric columns; competitors has text columns). To compare
+   data across both tables use two separate CTEs or subqueries joined with a cross join or
+   written as independent SELECT statements in a single CTE block.
+9. When querying competitors.hourly_rate (stored as text like "$150-200/hr"), do not cast or
+   compare it as a number — return it as-is or filter with LIKE/ILIKE.
 """
 
 FORBIDDEN_KEYWORDS = {
