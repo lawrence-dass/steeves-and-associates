@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { fetchApi } from "@/lib/api";
+
+const CanadaMap = dynamic(() => import("@/components/ui/CanadaMap"), { ssr: false });
 import KpiCard from "@/components/ui/KpiCard";
 import {
   BarChart,
@@ -56,6 +59,7 @@ interface MarketSummary {
 interface LocationGroup {
   location: string;
   count: number;
+  companies?: string[];
 }
 
 interface SizeGroup {
@@ -115,6 +119,7 @@ export default function MarketPage() {
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mapView, setMapView] = useState(true);
 
   const rateSteps = useMemo(() => {
     const rateMin = filterOptions?.rate_min;
@@ -638,10 +643,36 @@ export default function MarketPage() {
         </div>
 
         <div className="vz-card p-5">
-          <h2 className="text-sm font-semibold text-[#495057] mb-1">Geographic Distribution</h2>
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-sm font-semibold text-[#495057]">Geographic Distribution</h2>
+            <div className="flex rounded-md border border-steeves-border overflow-hidden text-xs">
+              <button
+                onClick={() => setMapView(true)}
+                className={`px-3 py-1 transition-colors ${
+                  mapView
+                    ? "bg-steeves-navy text-white"
+                    : "bg-white text-steeves-muted hover:bg-steeves-light"
+                }`}
+              >
+                Map
+              </button>
+              <button
+                onClick={() => setMapView(false)}
+                className={`px-3 py-1 transition-colors ${
+                  !mapView
+                    ? "bg-steeves-navy text-white"
+                    : "bg-white text-steeves-muted hover:bg-steeves-light"
+                }`}
+              >
+                Chart
+              </button>
+            </div>
+          </div>
           <p className="text-xs text-steeves-muted mb-3">Company count by location for current filters</p>
           {byLocation.length === 0 ? (
             <div className="h-[320px] flex items-center justify-center text-sm text-steeves-muted">No data for selected filters.</div>
+          ) : mapView ? (
+            <CanadaMap locations={byLocation} highlightCity="Burnaby" />
           ) : (
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={byLocation}>

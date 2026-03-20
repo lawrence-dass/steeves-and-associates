@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { postApi, fetchApi } from "@/lib/api";
-import { Send, Bot, User, Sparkles } from "lucide-react";
+import { Send, Bot, User, Sparkles, Loader2 } from "lucide-react";
 
 interface Message {
   role: "user" | "assistant";
@@ -17,11 +17,46 @@ interface Suggestion {
   category: string;
 }
 
+// Phase sets keyed by detected intent.
+// `firstTime` adds an "Initializing agent" step only on the very first message.
+function getLoadingPhases(message: string, firstTime: boolean): string[] {
+  const msg = message.toLowerCase();
+
+  let middle: string;
+  if (/health|churn|at.?risk|retention|engagement/.test(msg)) {
+    middle = "Computing client health scores";
+  } else if (/recommend|assign|allocat|staff|who should/.test(msg)) {
+    middle = "Matching consultants to project";
+  } else if (/competitor|market|partner|benchmark|compare|vs\.?/.test(msg)) {
+    middle = "Retrieving competitive data";
+  } else if (
+    /revenue|hours|billable|trend|top|average|total|monthly|quarter|q[1-4]|rate|client|resource/.test(
+      msg
+    )
+  ) {
+    middle = "Forming & running SQL query";
+  } else {
+    middle = "Searching knowledge base";
+  }
+
+  const core = ["Understanding your question", middle, "Generating response"];
+  return firstTime ? ["Initializing agent", ...core] : core;
+}
+
+// Delays per number of phases
+const PHASE_DELAYS: Record<number, number[]> = {
+  4: [0, 1200, 3000, 7000],
+  3: [0, 2000, 6000],
+};
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingPhase, setLoadingPhase] = useState(0);
+  const [loadingPhases, setLoadingPhases] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const agentInitialized = useRef(false); // tracks whether "Initializing agent" has been shown
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,16 +67,32 @@ export default function ChatPage() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, loading]);
+
+  // Advance through phases while loading
+  useEffect(() => {
+    if (!loading) {
+      setLoadingPhase(0);
+      return;
+    }
+
+    const delays = PHASE_DELAYS[loadingPhases.length] ?? PHASE_DELAYS[3];
+    const timers = delays.map((delay, i) =>
+      setTimeout(() => setLoadingPhase(i), delay)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [loading, loadingPhases.length]);
 
   async function sendMessage(text?: string) {
     const msg = text || input.trim();
     if (!msg || loading) return;
 
-    const userMessage: Message = { role: "user", content: msg };
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => [...prev, { role: "user", content: msg }]);
     setInput("");
     setLoading(true);
+    const firstTime = !agentInitialized.current;
+    setLoadingPhases(getLoadingPhases(msg, firstTime));
+    agentInitialized.current = true;
 
     try {
       const result = await postApi<{
@@ -66,7 +117,7 @@ export default function ChatPage() {
           sql: result.sql,
         },
       ]);
-    } catch (err) {
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
@@ -109,14 +160,13 @@ export default function ChatPage() {
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto vz-card p-4 space-y-4">
-        {messages.length === 0 && (
+        {messages.length === 0 && !loading && (
           <div className="text-center py-12">
             <Sparkles className="mx-auto text-steeves-teal mb-3" size={32} />
             <p className="text-steeves-muted text-sm mb-6">
               Ask me anything about Steeves and Associates
             </p>
 
-            {/* Suggestion chips */}
             <div className="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">
               {suggestions.map((s, i) => (
                 <button
@@ -188,16 +238,20 @@ export default function ChatPage() {
           </div>
         ))}
 
+        {/* Single-line animated phase indicator */}
         {loading && (
           <div className="flex gap-3">
-            <div className="w-7 h-7 rounded-full bg-steeves-navy flex items-center justify-center flex-shrink-0">
+            <div className="w-7 h-7 rounded-full bg-steeves-navy flex items-center justify-center flex-shrink-0 mt-1">
               <Bot size={14} className="text-white" />
             </div>
             <div className="bg-steeves-light rounded-lg px-4 py-3 border border-steeves-border">
-              <div className="flex gap-1">
-                <span className="w-2 h-2 bg-steeves-muted/70 rounded-full animate-bounce" />
-                <span className="w-2 h-2 bg-steeves-muted/70 rounded-full animate-bounce [animation-delay:0.15s]" />
-                <span className="w-2 h-2 bg-steeves-muted/70 rounded-full animate-bounce [animation-delay:0.3s]" />
+              <div
+                key={loadingPhase}
+                className="flex items-center gap-2 text-xs text-steeves-ink"
+                style={{ animation: "fadeSlideIn 0.35s ease both" }}
+              >
+                <Loader2 size={12} className="flex-shrink-0 animate-spin text-steeves-blue" />
+                <span>{loadingPhases[loadingPhase]}…</span>
               </div>
             </div>
           </div>
