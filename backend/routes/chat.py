@@ -1,8 +1,8 @@
 """
 Chat routes — AI-powered Q&A across all data sources.
 """
-from flask import Blueprint, jsonify, request
-from services.gemini_chat import chat
+from flask import Blueprint, jsonify, request, Response, stream_with_context
+from services.gemini_chat import chat, chat_stream
 from services.database import execute, query
 
 chat_bp = Blueprint("chat", __name__)
@@ -40,6 +40,68 @@ def send_message():
         pass  # Don't fail the response if history save fails
     
     return jsonify(result)
+
+
+@chat_bp.route("/stream", methods=["POST"])
+def stream_message():
+    """Stream an AI chat response using Server-Sent Events."""
+    import json as _json
+
+    data = request.get_json(silent=True) or {}
+    message = data.get("message", "").strip()
+    session_id = data.get("session_id", "default")
+    conversation_history = data.get("history", [])
+
+    if not message:
+        return jsonify({"error": "Message is required"}), 400
+    if len(message) > 2000:
+        return jsonify({"error": "Message too long (max 2000 characters)"}), 400
+
+    # Accumulate outside the generator so call_on_close can read final values
+    accumulated_text: list[str] = []
+    sources_used: list[str] = []
+
+    def generate():
+        for sse_line in chat_stream(message, conversation_history):
+            yield sse_line
+            # Track accumulation for history (no DB writes here — done in call_on_close)
+            try:
+                if sse_line.startswith("data: "):
+                    event = _json.loads(sse_line[6:])
+                    if event.get("type") == "chunk":
+                        accumulated_text.append(event.get("text", ""))
+                    elif event.get("type") == "meta":
+                        sources_used[:] = event.get("sources_used", [])
+            except Exception:
+                pass
+
+    response = Response(
+        generate(),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
+
+    @response.call_on_close
+    def _save_history():
+        """Write to chat_history after the stream is fully sent to the client."""
+        try:
+            execute("""
+                INSERT INTO chat_history (session_id, role, content, data_source)
+                VALUES (%s, %s, %s, %s)
+            """, (session_id, "user", message, None))
+            full_response = "".join(accumulated_text)
+            execute("""
+                INSERT INTO chat_history (session_id, role, content, data_source)
+                VALUES (%s, %s, %s, %s)
+            """, (session_id, "assistant", full_response, ",".join(sources_used)))
+        except Exception:
+            pass
+
+    return response
 
 
 @chat_bp.route("/history/<session_id>")

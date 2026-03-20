@@ -1,6 +1,6 @@
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "").trim();
 
-function buildApiUrl(path: string): string {
+export function buildApiUrl(path: string): string {
   if (!path.startsWith("/")) {
     throw new Error(`API path must start with '/': ${path}`);
   }

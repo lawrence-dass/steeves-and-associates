@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Sequence
+from typing import Generator, Sequence
 
 import requests
 
@@ -345,6 +345,289 @@ def generate_with_openrouter(
         return None, "OpenRouter response did not include message content."
 
     return content, None
+
+def generate_with_ollama_stream(
+    system_prompt: str,
+    user_prompt: str,
+    conversation_history: Sequence[dict] | None = None,
+) -> Generator[str, None, None]:
+    """Stream tokens from local Ollama (NDJSON format)."""
+    base_url, model_name, timeout_sec = get_ollama_config()
+    endpoint = f"{base_url}/api/chat"
+
+    payload = {
+        "model": model_name,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            *history_to_ollama_messages(conversation_history),
+            {"role": "user", "content": user_prompt},
+        ],
+        "stream": True,
+        "options": {"temperature": 0.2},
+    }
+
+    try:
+        resp = requests.post(endpoint, json=payload, stream=True, timeout=timeout_sec)
+    except requests.RequestException as exc:
+        raise RuntimeError(f"Ollama stream request failed: {exc}") from exc
+
+    if not resp.ok:
+        raise RuntimeError(f"Ollama API error {resp.status_code}: {resp.text[:300]}")
+
+    for raw_line in resp.iter_lines():
+        if not raw_line:
+            continue
+        line = raw_line.decode("utf-8") if isinstance(raw_line, bytes) else raw_line
+        try:
+            data = json.loads(line)
+            text = (data.get("message") or {}).get("content") or ""
+            if text:
+                yield text
+            if data.get("done"):
+                break
+        except (json.JSONDecodeError, KeyError):
+            continue
+
+
+def generate_with_openrouter_stream(
+    system_prompt: str,
+    user_prompt: str,
+    conversation_history: Sequence[dict] | None = None,
+) -> Generator[str, None, None]:
+    """Stream tokens from OpenRouter using SSE."""
+    api_key = (os.getenv("OPENROUTER_API_KEY") or "").strip()
+    api_key = api_key.encode("ascii", errors="ignore").decode("ascii")
+    if not api_key:
+        raise RuntimeError("`OPENROUTER_API_KEY` is not set.")
+
+    model_name, _, timeout_sec = get_openrouter_config()
+    messages = [
+        {"role": "system", "content": _ascii_safe(system_prompt)},
+        *[
+            {"role": m["role"], "content": _ascii_safe(m["content"])}
+            for m in history_to_ollama_messages(conversation_history)
+        ],
+        {"role": "user", "content": _ascii_safe(user_prompt)},
+    ]
+
+    payload_bytes = json.dumps(
+        {"model": model_name, "messages": messages, "temperature": 0.2, "max_tokens": 1000, "stream": True},
+        ensure_ascii=True,
+    ).encode("ascii")
+
+    try:
+        resp = requests.post(
+            f"{OPENROUTER_BASE_URL}/chat/completions",
+            data=payload_bytes,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                "Accept": "text/event-stream",
+            },
+            stream=True,
+            timeout=timeout_sec,
+        )
+    except requests.exceptions.ReadTimeout as exc:
+        raise RuntimeError(f"OpenRouter stream timed out: {exc}") from exc
+    except requests.RequestException as exc:
+        raise RuntimeError(f"OpenRouter stream request failed: {exc}") from exc
+
+    if not resp.ok:
+        raise RuntimeError(f"OpenRouter API error {resp.status_code}: {resp.text[:300]}")
+
+    for raw_line in resp.iter_lines():
+        if not raw_line:
+            continue
+        line = raw_line.decode("utf-8") if isinstance(raw_line, bytes) else raw_line
+        if not line.startswith("data: "):
+            continue
+        data_str = line[6:]
+        if data_str.strip() == "[DONE]":
+            break
+        try:
+            chunk = json.loads(data_str)
+            text = (chunk.get("choices", [{}])[0].get("delta", {}).get("content") or "")
+            if text:
+                yield text
+        except (json.JSONDecodeError, IndexError, KeyError):
+            continue
+
+
+def llm_stream(
+    system_prompt: str,
+    user_prompt: str,
+    conversation_history: Sequence[dict] | None = None,
+) -> Generator[str, None, None]:
+    """Provider-agnostic streaming LLM helper. Yields text chunks."""
+    provider = get_llm_provider()
+    if provider == "ollama":
+        yield from generate_with_ollama_stream(system_prompt, user_prompt, conversation_history)
+    elif provider == "openrouter":
+        yield from generate_with_openrouter_stream(system_prompt, user_prompt, conversation_history)
+    else:
+        # Gemini doesn't have a streaming path here; fall back to single-shot
+        text, err = generate_with_gemini(system_prompt, user_prompt)
+        if err:
+            raise RuntimeError(err)
+        if text:
+            yield text
+
+
+def _sse(event: dict) -> str:
+    """Format a dict as an SSE data line."""
+    return f"data: {json.dumps(event, ensure_ascii=True)}\n\n"
+
+
+def chat_stream(
+    message: str,
+    conversation_history: Sequence[dict] | None = None,
+) -> Generator[str, None, None]:
+    """
+    Streaming chat entrypoint. Yields SSE-formatted strings:
+      data: {"type":"meta",  ...}
+      data: {"type":"chunk", "text":"..."}
+      data: {"type":"done"}
+      data: {"type":"error", "message":"..."}   ← on failure
+    """
+    primary_intent = classify_chat_intent(message, conversation_history)
+
+    # ── data fetch phase (synchronous) ───────────────────────────────────────
+    narration_system_prompt = SQL_NARRATOR_PROMPT
+    narration_user_prompt = ""
+    meta_extra: dict = {}
+    sources_used: list[str] = []
+
+    try:
+        if primary_intent == "data_query":
+            sql = generate_sql_from_question(message, llm_generate, conversation_history)
+            rows = execute_read_only_sql(sql)
+            sources_used = infer_sources_from_sql(sql)
+            meta_extra["sql"] = sql
+
+            if not rows:
+                yield _sse({"type": "meta", "intents": [primary_intent],
+                            "sources_used": sources_used, "sql": sql})
+                yield _sse({"type": "chunk",
+                            "text": "No rows matched your query filters. "
+                                    "Try a broader date range or fewer constraints."})
+                yield _sse({"type": "done"})
+                return
+
+            narration_system_prompt = SQL_NARRATOR_PROMPT
+            narration_user_prompt = (
+                f"User question: {message}\n\n"
+                f"Executed SQL:\n{sql}\n\n"
+                f"Result rows (JSON):\n{json.dumps(rows, default=str)}"
+            )
+
+        elif primary_intent == "client_health":
+            scores = score_clients()
+            summary = summarize_client_health(scores)
+            sources_used = ["operational"]
+
+            if not scores:
+                yield _sse({"type": "meta", "intents": [primary_intent], "sources_used": sources_used})
+                yield _sse({"type": "chunk", "text": "No client health data is available yet."})
+                yield _sse({"type": "done"})
+                return
+
+            lower_message = message.lower()
+            matched_client = next(
+                (row for row in scores if str(row.get("customer_name", "")).lower() in lower_message), None
+            )
+            context_payload = (
+                {"matched_client": matched_client,
+                 "summary": {k: summary[k] for k in ("total_clients", "at_risk_count", "watch_count", "healthy_count")}}
+                if matched_client
+                else {"summary": summary, "lowest_scores": scores[:10],
+                      "highest_scores": sorted(scores, key=lambda r: r["health_score"], reverse=True)[:5]}
+            )
+            narration_system_prompt = CLIENT_HEALTH_PROMPT
+            narration_user_prompt = (
+                f"User question: {message}\n\n"
+                f"Client health context:\n{json.dumps(context_payload, default=str)}"
+            )
+
+        elif primary_intent == "resource_recommend":
+            inputs = get_allocation_inputs()
+            known_customers = inputs.get("customers") or []
+            known_resources = inputs.get("resources") or []
+            categories = inputs.get("categories") or []
+            customer_name = extract_customer_from_query(message, known_customers)
+            sources_used = ["operational"]
+
+            if not customer_name:
+                sample = ", ".join(known_customers[:6])
+                yield _sse({"type": "meta", "intents": [primary_intent], "sources_used": sources_used})
+                yield _sse({"type": "chunk",
+                            "text": f"I can generate staffing recommendations, but I need a customer name. "
+                                    f"Try one of: {sample}."})
+                yield _sse({"type": "done"})
+                return
+
+            lower_message = message.lower()
+            category = next((c for c in categories if c.lower() in lower_message), None)
+            existing_team = [r for r in known_resources if r.lower() in lower_message]
+            recommendations = recommend_resources(
+                customer_name=customer_name, category=category,
+                existing_team=existing_team, top_n=5,
+            )
+
+            if not recommendations:
+                yield _sse({"type": "meta", "intents": [primary_intent], "sources_used": sources_used})
+                yield _sse({"type": "chunk", "text": f"No recommendation data was found for {customer_name}."})
+                yield _sse({"type": "done"})
+                return
+
+            narration_system_prompt = RESOURCE_RECOMMEND_PROMPT
+            narration_user_prompt = (
+                f"User question: {message}\n\n"
+                f"Customer: {customer_name}\n"
+                f"Category: {category or 'not provided'}\n"
+                f"Existing team: {existing_team}\n"
+                f"Recommendations:\n{json.dumps(recommendations, default=str)}"
+            )
+
+        elif primary_intent == "general":
+            sources_used = []
+            narration_system_prompt = GENERAL_ASSISTANT_PROMPT
+            narration_user_prompt = message
+
+        else:  # document_qa
+            context_intents = detect_context_intents(message)
+            sources_used = context_intents
+            context_parts = []
+            if "operational" in context_intents:
+                context_parts.append(build_operational_context())
+            if "competitive" in context_intents:
+                context_parts.append(build_competitive_context())
+            full_context = "\n\n---\n\n".join(context_parts)
+            narration_system_prompt = SYSTEM_PROMPT
+            narration_user_prompt = build_user_prompt(full_context, message)
+
+    except Exception as exc:
+        yield _sse({"type": "error", "message": str(exc)})
+        return
+
+    # ── meta event (data fetch complete) ────────────────────────────────────
+    yield _sse({"type": "meta", "intents": [primary_intent],
+                "sources_used": sources_used, **meta_extra})
+
+    # ── narration streaming phase ────────────────────────────────────────────
+    try:
+        for chunk_text in llm_stream(narration_system_prompt, narration_user_prompt, conversation_history):
+            yield _sse({"type": "chunk", "text": chunk_text})
+    except Exception as exc:
+        # Fall back to single-shot narration on stream error
+        fallback, _ = llm_generate(narration_system_prompt, narration_user_prompt, conversation_history)
+        if fallback:
+            yield _sse({"type": "chunk", "text": fallback})
+        else:
+            yield _sse({"type": "error", "message": str(exc)})
+            return
+
+    yield _sse({"type": "done"})
+
 
 def llm_generate(
     system_prompt: str,
