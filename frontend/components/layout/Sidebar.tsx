@@ -48,7 +48,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="px-6 py-4 border-t border-white/10 text-xs text-white/40">
-        <p>ALY6980 Capstone · NEU</p>
+        <p>Individual Portfolio Project</p>
       </div>
     </aside>
   );

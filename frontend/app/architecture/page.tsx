@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 
 const DIAGRAM = `flowchart LR
-  U[Users<br/>Consultants, Managers, Faculty]:::actor
+  U[Users<br/>Consultants, Managers, Stakeholders]:::actor
 
   subgraph FE["Next.js Frontend — Vercel"]
     OV[Overview]:::frontend

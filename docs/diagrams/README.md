@@ -1,6 +1,6 @@
 # Application Diagrams (Mermaid)
 
-These diagrams are color-coded and presentation-ready for teammates and faculty review.
+These diagrams are color-coded and presentation-ready for stakeholder reviews and portfolio walkthroughs.
 Reflect the live deployed stack as of February 2026.
 
 1. [01-system-architecture.md](./01-system-architecture.md) — Full stack map: Vercel · Azure Container Apps · Azure PostgreSQL · OpenRouter · GitHub Actions
