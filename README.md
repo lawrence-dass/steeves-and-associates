@@ -1,8 +1,10 @@
-# Steeves & Associates — Analytics Dashboard
+# Steeves & Associates Analytics Dashboard
 
-An end-to-end analytics platform for Steeves and Associates, a 21-employee Microsoft consulting firm in Canada. The application combines operational analytics, competitive market positioning, client health scoring, resource allocation recommendations, and an AI-powered natural language chat assistant.
+End-to-end analytics dashboard for Steeves and Associates, a Microsoft consulting firm in Canada. The platform combines operational reporting, market benchmarking, client health scoring, resource allocation insights, and an AI-powered natural language chat experience.
 
 **Independently built and maintained by Lawrence Dass as a portfolio project**
+
+Built with Next.js, Flask, PostgreSQL, Azure, and Vercel.
 
 ---
 
@@ -24,7 +26,7 @@ Next.js (Vercel)
      │  NEXT_PUBLIC_API_URL (production)
      │  /api/* rewrite to localhost:5000 (dev)
      ▼
-Flask API (Azure Container Apps — East US)
+Flask API (Azure Container Apps - East US)
      │
      ├──► Azure PostgreSQL Flexible Server (Canada Central)
      │    database: steeves_capstone
@@ -56,7 +58,7 @@ Flask API (Azure Container Apps — East US)
 | Frontend | Next.js 14 (App Router) · Tailwind CSS · Recharts |
 | Backend | Python Flask · Gunicorn |
 | Database | PostgreSQL 16 (Azure Flexible Server) |
-| LLM | OpenRouter — DeepSeek V3 + Llama 3.3 70B :free |
+| LLM | OpenRouter - DeepSeek V3 + Llama 3.3 70B :free |
 | Hosting | Vercel (frontend) · Azure Container Apps (backend) · Azure Container Registry |
 | Data | 17,792-row operational dataset (2020–2025) · 50-company competitor dataset |
 
@@ -66,11 +68,11 @@ Flask API (Azure Container Apps — East US)
 
 See [`docs/diagrams/`](./docs/diagrams/) for full Mermaid diagrams:
 
-1. [System Architecture](./docs/diagrams/01-system-architecture.md) — Full stack map
-2. [User Flow](./docs/diagrams/02-user-flow.md) — End-user paths across all 5 modules
-3. [Data Pipeline](./docs/diagrams/03-data-pipeline.md) — Ingestion to analytics outputs
-4. [API Surface](./docs/diagrams/04-api-surface.md) — All endpoint groups and dependencies
-5. [Chat Lifecycle](./docs/diagrams/05-chat-lifecycle.md) — Intent routing, NL-to-SQL, RFMT, allocation paths
+1. [System Architecture](./docs/diagrams/01-system-architecture.md) - Full stack map
+2. [User Flow](./docs/diagrams/02-user-flow.md) - End-user paths across all 5 modules
+3. [Data Pipeline](./docs/diagrams/03-data-pipeline.md) - Ingestion to analytics outputs
+4. [API Surface](./docs/diagrams/04-api-surface.md) - All endpoint groups and dependencies
+5. [Chat Lifecycle](./docs/diagrams/05-chat-lifecycle.md) - Intent routing, NL-to-SQL, RFMT, allocation paths
 
 > Diagrams render in GitHub and in VS Code / Cursor with the [Markdown Preview Mermaid Support](https://marketplace.visualstudio.com/items?itemName=bierner.markdown-mermaid) extension.
 
@@ -125,7 +127,7 @@ NEXT_PUBLIC_API_URL=http://localhost:5000
 
 ## Deployment
 
-### CI/CD — GitHub Actions (Backend)
+### CI/CD - GitHub Actions (Backend)
 
 Pushing to `main` with changes under `backend/**` automatically:
 1. Builds a `linux/amd64` Docker image on the GitHub runner
@@ -151,7 +153,7 @@ See [`docs/diagrams/06-cicd-pipeline.md`](./docs/diagrams/06-cicd-pipeline.md) f
 
 #### Manual deploy (one-off, Apple Silicon)
 ```bash
-# Required on Apple Silicon — Azure needs linux/amd64
+# Required on Apple Silicon - Azure needs linux/amd64
 az acr login --name steevesassociatesacr
 docker buildx build --platform linux/amd64 \
   -t steevesassociatesacr.azurecr.io/steeves-api:latest --push backend/
@@ -162,7 +164,7 @@ az containerapp update \
   --image steevesassociatesacr.azurecr.io/steeves-api:latest
 ```
 
-### Frontend — Vercel
+### Frontend - Vercel
 Auto-deploys on every push to `main`.
 
 Initial setup:
