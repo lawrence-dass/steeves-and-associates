@@ -8,6 +8,14 @@ Built with Next.js, Flask, PostgreSQL, Azure, and Vercel.
 
 ---
 
+## Screenshots
+
+![Steeves & Associates dashboard screenshot 1](frontend/public/Steeves&Associates1.png)
+
+![Steeves & Associates dashboard screenshot 2](frontend/public/Steeves&Associates2.png)
+
+---
+
 ## Live Deployment
 
 | Layer | URL |
