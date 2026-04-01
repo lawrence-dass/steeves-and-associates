@@ -5,7 +5,7 @@ import MobileNav from "@/components/layout/MobileNav";
 
 export const metadata: Metadata = {
   title: "Steeves & Associates — Analytics Dashboard",
-  description: "Capstone analytics dashboard for ALY6080",
+  description: "Portfolio analytics dashboard and AI assistant for Steeves & Associates.",
 };
 
 export default function RootLayout({

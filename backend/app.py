@@ -1,5 +1,5 @@
 """
-Steeves & Associates Capstone — Flask API
+Steeves & Associates Analytics API
 Route groups: overview, competitors, chat, client-health, allocation
 """
 import os

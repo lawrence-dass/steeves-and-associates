@@ -155,7 +155,7 @@ const CATEGORIES = [
         function:
           "Runs the PostgreSQL 16 server on Azure infrastructure (Canada Central, B1ms tier). Handles automated backups, security patching, and SSL enforcement. Firewall rules allow connections from the Azure Container Apps environment and from local developer IPs.",
         reason:
-          "Managed service eliminates database administration work. The Flexible Server tier allows pausing the instance during inactivity, reducing cost for a capstone project. Hosting in Canada Central keeps data residency aligned with the company's Canadian operations.",
+          "Managed service eliminates database administration work. The Flexible Server tier allows pausing the instance during inactivity, reducing cost for a portfolio project. Hosting in Canada Central keeps data residency aligned with the company's Canadian operations.",
         link: "https://azure.microsoft.com/en-ca/products/postgresql",
       },
     ],

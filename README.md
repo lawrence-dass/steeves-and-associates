@@ -1,10 +1,8 @@
-# Steeves & Associates — Capstone Analytics Dashboard
+# Steeves & Associates — Analytics Dashboard
 
-## ALY6980: Integrated Experiential Learning | Northeastern University | Spring 2025
+An end-to-end analytics platform for Steeves and Associates, a 21-employee Microsoft consulting firm in Canada. The application combines operational analytics, competitive market positioning, client health scoring, resource allocation recommendations, and an AI-powered natural language chat assistant.
 
-A business intelligence dashboard for Steeves and Associates, a 21-employee Microsoft consulting firm in Canada. Provides operational analytics, competitive market positioning, client health scoring, resource allocation recommendations, and an AI-powered natural language chat assistant.
-
-**Built by Lawrence Dass**
+**Independently built and maintained by Lawrence Dass as a portfolio project**
 
 ---
 

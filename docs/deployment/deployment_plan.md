@@ -346,7 +346,7 @@ Per chatbot conversation (~1,500 tokens total across 3 LLM calls):
 - SQL generation + narration: ~$0.0004 (DeepSeek V3.2)
 - **$10 in credits ≈ 25,000 conversations**
 
-At 10 demo conversations per day, credits last **~7 years**. Even with heavier usage during capstone demos, you're covered for well over a year.
+At 10 demo conversations per day, credits last **~7 years**. Even with heavier usage during portfolio demos, you're covered for well over a year.
 
 ### Code Implementation
 

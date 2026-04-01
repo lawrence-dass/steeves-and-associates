@@ -1,4 +1,4 @@
--- Steeves & Associates Capstone — Database Schema
+-- Steeves & Associates Analytics Platform — Database Schema
 -- Run: psql -U postgres -f schema.sql
 
 -- Create database
